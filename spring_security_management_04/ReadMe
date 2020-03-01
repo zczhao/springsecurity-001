@@ -1,0 +1,1 @@
+spring security认证用户状态的判断，增加记住我功能(存储到数据库，新增persistent_logins表)

@@ -1,0 +1,131 @@
+分布式认证
+
+----------------------------------------------------------------------------------------------------------------
+
+授权码模式（authorization code）
+    流程
+        说明：【A服务客户端】需要用到【B服务客户端】中的资源
+        第一步：【A服务客户端】将用户自动导航到【B服务认证服务】，这一步用户需要提供一个回调地址，以备【B服务认证服务】返回授权码使用。
+        第二步：用户点击授权按钮表示让【A服务客户端】使用【B服务资源服务】，这一步需要用户登录B服务，也就是说用户要事先具有B服务的使用权。
+        第三步：【B服务认证服务】生成授权码，授权码将通过第一步提供的回调地址，返回给【A服务客户端】。注意这个授权码并非通行【B服务资源服务】的通行凭证。
+        第四步：【A服务认证服务】携带上一步得到的的授权码向【B服务认证服务】发送请求，获取通行凭证token。
+        第一步：【B服务认证服务】给【A服务认证服务】返回令牌token和更新令牌refresh token。
+    使用场景
+        授权码模式是OAuth2中最安全最完善的一种模式，应用场景最广泛，可以实现服务之间的调用，常见的微信、QQ等第三方登录也采用这种方式实现。
+    测试
+        获取授权码：
+            http://localhost:9001/oauth/authorize?response_type=code&client_id=heima_one
+                用浏览器发送请求后->是否给予操作操作资源的权限Approve是授权，Deny是拒绝-> https://www.baidu.com/?code=BSXvG8（code=授权码）
+        使用授权码到服务器申请通行令牌token
+            PostMan发送POST请求：http://localhost:9001/oauth/token
+                Body->form-data
+                    grant_type = authorization_code
+                    username = xiaoming （不是必需）
+                    password = 123456  （不是必需）
+                    client_id = heima_one
+                    client_secret = 123456
+                    code = BSXvG8（上面申请的授权码）
+                返回数据：
+                    {
+                        "access_token": "e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607",
+                        "token_type": "bearer",
+                        "refresh_token": "ea1d9ed6-fb2e-4cc0-8b27-77831dde0a79",
+                        "expires_in": 43199,
+                        "scope": "read write"
+                    }
+        用通行通行令牌token请求其他资源服务
+            http://localhost:9002/product/findAll?access_token=e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607
+
+----------------------------------------------------------------------------------------------------------------
+
+简化模式（implicit）
+    流程
+        说明：简化模式中没有【A服务认证服务】这一部分，全部有【A服务客户端】与B服务交互，整个过程不再有授权码，token直接暴露在浏览器。
+        第一步：【A服务客户端】将用户自动导航到【B服务认证服务】，这一步用户需要提供一个回调地址，以备【B服务认证服务】返回token使用，还会携带一个【A服务客户端】的状态标识state。
+        第二步：用户点击授权按钮表示让【A服务客户端】使用【B服务资源服务】，这一步需要用户登录B服务，也就是说用户要事先具有B服务的使用权限。
+        第三步：【B服务认证服务】生成通行令牌token，token将通过第一步提供的回调地址，返回给【A服务客户端】。
+    使用场景
+        适用于A服务没有服务器的情况。比如：纯手机小程序，javascript语言实现的网页插件等。
+    测试
+        http://localhost:9001/oauth/authorize?response_type=token&client_id=heima_one
+        发送请求后 -> https://www.baidu.com/#access_token=e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607&token_type=bearer&expires_in=42260&scope=read%20write
+        用通行通行令牌token请求其他资源服务
+        http://localhost:9002/product/findAll?access_token=e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607
+        
+----------------------------------------------------------------------------------------------------------------
+
+密码模式（resource owner password credentials）
+    流程
+        第一步：直接告诉【A服务客户端】自己的【B服务客户端】的用户名和密码
+        第二步：【A服务客户端】携带【B服务认证服务】的用户名和密码向【B服务认证服务】发起请求获取token。
+        第三步：【B服务认证服务】给【A服务客户端】颁发token。
+    使用场景
+        此种模式虽然简单，但是用户将B服务的用户名和密码暴露给了A服务，需要两个服务信任度非常高才能使用。
+    测试
+        申请通行令牌token
+            PostMan发送POST请求：http://localhost:9001/oauth/token
+                Body->form-data
+                    grant_type = authorization_code
+                    username = xiaoming
+                    password = 123456
+                    client_id = heima_one
+                    client_secret = 123456
+                返回数据：
+                    {
+                        "access_token": "e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607",
+                        "token_type": "bearer",
+                        "refresh_token": "ea1d9ed6-fb2e-4cc0-8b27-77831dde0a79",
+                        "expires_in": 41766,
+                        "scope": "read write"
+                    }
+        用通行通行令牌token请求其他资源服务
+            http://localhost:9002/product/findAll?access_token=e1b7b803-7fb4-4f9c-a3d1-ca5d266f7607
+            
+----------------------------------------------------------------------------------------------------------------
+
+客户端模式（client credentials）
+    流程
+        说明：这种模式其实已经不太属于OAuth2的范畴了，A服务完成脱离用户，以自己的身份去向B服务索取token，换言之，用户无需具备B服务的使用权也可以。完全是A服务与B服务内部的交互，与用户无关了。
+        第一步：A服务向B服务索取token。
+        第二步：B服务返回token给A服务。
+    使用场景
+        A服务本身需要B服务资源，与用户无关。
+    测试
+        申请通行令牌token
+            PostMan发送POST请求：http://localhost:9001/oauth/token
+                Body->form-data
+                    grant_type = authorization_code
+                    client_id = heima_one
+                    client_secret = 123456
+                返回数据：
+                    {
+                        "access_token": "288ec610-5f5b-4cd7-be81-eefeb5169000",
+                        "token_type": "bearer",
+                        "expires_in": 43199,
+                        "scope": "read write"
+                    }
+        用通行通行令牌token请求其他资源服务
+            http://localhost:9002/product/findAll?access_token=288ec610-5f5b-4cd7-be81-eefeb5169000
+
+----------------------------------------------------------------------------------------------------------------
+
+刷新token（refresh token）
+	用以上授权码模式、简化模式、密码模式返回的refresh_token去重新刷新token
+	测试
+		用refresh_token去申请通行令牌token
+			PostMan发送POST请求：http://localhost:9001/oauth/token
+                Body->form-data
+                    grant_type = refresh_token
+                    client_id = heima_one
+                    client_secret = 123456
+                    refresh_token = 
+        	返回数据：
+        		{
+				    "access_token": "77af85d0-41ba-45ff-9d16-9ae440a4fe5a",
+				    "token_type": "bearer",
+				    "refresh_token": "ea1d9ed6-fb2e-4cc0-8b27-77831dde0a79",
+				    "expires_in": 43199,
+				    "scope": "read write"
+				}
+	用通行通行令牌token请求其他资源服务		
+			http://localhost:9002/product/findAll?access_token=77af85d0-41ba-45ff-9d16-9ae440a4fe5a

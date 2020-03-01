@@ -1,0 +1,32 @@
+spring security 异常处理
+
+方式一：在spring-security.xml配置文件中处理
+	<security:http auto-config="true" use-expressions="true">
+		<!-- 处理403异常 -->
+    	<security:access-denied-handler error-page="/403.jsp"/>
+    </security:http>
+    
+方式二：在web.xml中处理
+	 <!-- 处理403异常 -->
+    <error-page>
+    	<error-code>403</error-code>
+    	<location>/403.jsp</location>
+    </error-page>
+    
+方式三：编写异常处理器
+package com.itheima.controller.advice;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+@ControllerAdvice
+public class ControllerExceptionAdvice {
+
+    // 只有出现AccessDeniedException异常才调转403.jsp页面
+    @ExceptionHandler(AccessDeniedException.class)
+    public String exceptionAdvice(){
+        return "forward:/403.jsp";
+    }
+
+}

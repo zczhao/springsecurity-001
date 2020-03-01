@@ -1,0 +1,8 @@
+Springboot+springSecurity+jsp集中式整合使用数据库加密认证方式
+开启授权操作
+@Configuration
+@EnableWebSecurity
+@EnableGlobalMethodSecurity(securedEnabled = true)
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+}
+增加全局异常处理
